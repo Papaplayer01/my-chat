@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Chat</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<style>
+  :root{--bg:#ffffff;--panel:#f7f7f8;--text:#1f2328;--muted:#6b7280;--border:#e5e7eb;--user:#eef2ff;--accent:#10a37f;--code:#0d1117}
+  @media (prefers-color-scheme:dark){:root{--bg:#212121;--panel:#171717;--text:#ececec;--muted:#9ca3af;--border:#2f2f2f;--user:#2f2f2f;--accent:#10a37f}}
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);display:flex}
+  button{font:inherit;color:inherit;cursor:pointer}
+  #side{width:260px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:10px;gap:8px;flex-shrink:0}
+  #new{border:1px solid var(--border);background:transparent;border-radius:10px;padding:10px 12px;text-align:left}
+  #new:hover,.chat:hover{background:var(--user)}
+  #list{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:2px}
+  .chat{display:flex;align-items:center;gap:6px;border-radius:8px;padding:8px 10px;cursor:pointer;font-size:14px}
+  .chat.active{background:var(--user)}
+  .chat span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chat button{border:0;background:none;color:var(--muted);opacity:0;padding:0 4px}
+  .chat:hover button{opacity:1}
+  #main{flex:1;display:flex;flex-direction:column;min-width:0;height:100%}
+  #bar{display:none;padding:8px 12px;border-bottom:1px solid var(--border)}
+  #bar button{border:0;background:none;font-size:20px}
+  #msgs{flex:1;overflow-y:auto;padding:24px 16px}
+  .wrap{max-width:760px;margin:0 auto}
+  .msg{margin:0 0 22px;display:flex;gap:12px}
+  .avatar{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;font-size:13px;font-weight:600;color:#fff;background:var(--accent)}
+  .msg.user .avatar{background:#6366f1}
+  .body{flex:1;min-width:0;overflow-wrap:anywhere}
+  .msg.user .body{background:var(--user);padding:8px 14px;border-radius:14px;flex:0 1 auto}
+  .msg.user{justify-content:flex-end}
+  .msg.user .avatar{display:none}
+  .body p{margin:0 0 10px}.body p:last-child{margin:0}
+  .body pre{background:var(--code);color:#e6edf3;padding:12px 14px;border-radius:10px;overflow-x:auto;position:relative;margin:10px 0}
+  .body code{font:13.5px/1.5 ui-monospace,Menlo,Consolas,monospace}
+  .body :not(pre)>code{background:var(--user);padding:2px 6px;border-radius:5px}
+  .body table{border-collapse:collapse;display:block;overflow-x:auto}
+  .body th,.body td{border:1px solid var(--border);padding:6px 10px}
+  .copy{position:absolute;top:6px;right:6px;font-size:12px;background:#30363d;color:#e6edf3;border:0;border-radius:6px;padding:2px 8px}
+  .err{color:#dc2626}
+  .actions{margin-top:6px;display:flex;gap:10px}
+  .actions button{border:0;background:none;color:var(--muted);font-size:13px;padding:0}
+  .actions button:hover{color:var(--text)}
+  #empty{text-align:center;margin-top:14vh}
+  #empty h1{font-size:28px;margin:0 0 18px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+  .chips button{border:1px solid var(--border);background:transparent;border-radius:999px;padding:8px 14px;font-size:14px}
+  .chips button:hover{background:var(--user)}
+  #foot{padding:8px 16px 14px}
+  #box{max-width:760px;margin:0 auto;display:flex;align-items:flex-end;gap:8px;background:var(--user);border-radius:22px;padding:8px 8px 8px 16px}
+  #in{flex:1;border:0;outline:0;background:transparent;color:inherit;font:inherit;resize:none;max-height:200px;padding:6px 0}
+  #send{width:36px;height:36px;border-radius:50%;border:0;background:var(--text);color:var(--bg);font-size:18px;flex-shrink:0}
+  #send:disabled{opacity:.35;cursor:default}
+  #note{text-align:center;font-size:12px;color:var(--muted);margin-top:8px}
+  #top{display:flex;gap:10px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+  #top select,#top button{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font:inherit;font-size:14px;color:inherit}
+  #top label{font-size:14px;display:flex;gap:6px;align-items:center;cursor:pointer}
+  #top .sp{flex:1}
+  #attach{background:transparent;border:0;font-size:20px;padding:0 4px;color:var(--muted)}
+  #chips{max-width:760px;margin:0 auto 6px;display:flex;gap:6px;flex-wrap:wrap}
+  .att{background:var(--user);border-radius:8px;padding:3px 8px;font-size:13px;display:flex;gap:6px;align-items:center}
+  .att button{border:0;background:none;color:var(--muted);padding:0}
+  .atts{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+  .atts .att{background:rgba(127,127,127,.2)}
+  .status{color:var(--muted);font-style:italic}
+  .sources{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap}
+  .sources a{font-size:12px;border:1px solid var(--border);border-radius:999px;padding:2px 10px;color:var(--muted);text-decoration:none;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sources a:hover{color:var(--text)}
+  dialog{border:1px solid var(--border);border-radius:14px;background:var(--bg);color:var(--text);width:min(520px,92vw)}
+  dialog textarea{width:100%;height:160px;background:var(--panel);color:inherit;border:1px solid var(--border);border-radius:8px;padding:8px;font:inherit}
+  dialog menu{display:flex;justify-content:flex-end;gap:8px;padding:0;margin:10px 0 0}
+  dialog button{border:1px solid var(--border);background:var(--panel);border-radius:8px;padding:6px 14px}
+  @media (max-width:760px){
+    #side{position:fixed;inset:0 auto 0 0;z-index:5;transform:translateX(-100%);transition:transform .2s}
+    body.open #side{transform:none}
+    #bar{display:block}
+  }
+</style>
+</head>
+<body>
+<aside id="side">
+  <button id="new">+ New chat</button>
+  <div id="list"></div>
+</aside>
+<div id="main">
+  <div id="bar"><button id="menu" aria-label="Menu">☰</button></div>
+  <div id="top">
+    <select id="model" title="Model"></select>
+    <label title="Let the assistant search the web and cite sources"><input type="checkbox" id="web"> Web search</label>
+    <span class="sp"></span>
+    <button id="instr">Instructions</button>
+    <button id="export">Export</button>
+  </div>
+  <div id="msgs"><div class="wrap" id="thread"></div></div>
+  <div id="foot">
+    <div id="chips"></div>
+    <div id="box">
+      <button id="attach" title="Attach images, PDFs or text files">📎</button>
+      <input type="file" id="file" multiple hidden accept="image/*,.pdf,.txt,.md,.csv,.json,.py,.js,.ts,.html,.css,.java,.c,.cpp,.sql,.yml,.yaml,.log">
+      <textarea id="in" rows="1" placeholder="Message the assistant..."></textarea>
+      <button id="send" title="Send">↑</button>
+    </div>
+    <div id="note">AI can make mistakes. Check important information.</div>
+  </div>
+</div>
+
+<dialog id="dlg"><h3 style="margin-top:0">Custom instructions</h3>
+<p style="color:var(--muted);font-size:14px;margin:0 0 8px">Applied to every chat, e.g. "I am a DevOps engineer. Keep answers short and show commands."</p>
+<textarea id="instrText" maxlength="2000"></textarea>
+<menu><button id="instrCancel">Cancel</button><button id="instrSave">Save</button></menu></dialog>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const KEY = "mychat.v1";
+let state = load();          // {chats:[{id,title,messages:[{role,content}]}], current:id}
+let controller = null;       // AbortController for the active stream
+let busy = false;
+let pending = [];            // attachments waiting to be sent
+const SETTINGS = "mychat.settings";
+let settings = (()=>{ try { return JSON.parse(localStorage.getItem(SETTINGS)) || {}; } catch(e){ return {}; } })();
+const saveSettings = () => { try { localStorage.setItem(SETTINGS, JSON.stringify(settings)); } catch(e){} };
+
+function load(){
+  try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.chats) return s; } catch(e){}
+  return {chats:[], current:null};
+}
+function save(){
+  try {
+    const slim = JSON.stringify(state, (k, v) => (k === "data" || k === "text") && typeof v === "string" && v.length > 2000 ? undefined : v);
+    localStorage.setItem(KEY, slim);
+  } catch(e){}
+}
+const cur = () => state.chats.find(c => c.id === state.current);
+const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+function newChat(){
+  if (busy) return;
+  const empty = state.chats.find(c => c.messages.length === 0);
+  if (empty) { state.current = empty.id; }
+  else { const c = {id:uid(), title:"New chat", messages:[]}; state.chats.unshift(c); state.current = c.id; }
+  save(); render(); $("#in").focus(); document.body.classList.remove("open");
+}
+
+function renderList(){
+  const list = $("#list"); list.innerHTML = "";
+  for (const c of state.chats){
+    const row = document.createElement("div");
+    row.className = "chat" + (c.id === state.current ? " active" : "");
+    const t = document.createElement("span"); t.textContent = c.title;
+    const del = document.createElement("button"); del.textContent = "✕"; del.title = "Delete chat";
+    del.onclick = e => { e.stopPropagation(); if (busy) return;
+      state.chats = state.chats.filter(x => x.id !== c.id);
+      if (state.current === c.id) state.current = state.chats[0]?.id ?? null;
+      if (!state.current) { newChat(); return; }
+      save(); render(); };
+    row.onclick = () => { if (busy) return; state.current = c.id; save(); render(); document.body.classList.remove("open"); };
+    row.append(t, del); list.append(row);
+  }
+}
+
+function md(text){
+  const html = marked.parse(text, {breaks:true});
+  return DOMPurify.sanitize(html);
+}
+function enhance(el){
+  el.querySelectorAll("pre").forEach(pre => {
+    if (pre.querySelector(".copy")) return;
+    const code = pre.querySelector("code");
+    if (code && window.hljs) { try { hljs.highlightElement(code); } catch(e){} }
+    const b = document.createElement("button"); b.className = "copy"; b.textContent = "Copy";
+    b.onclick = () => { navigator.clipboard.writeText(pre.innerText.replace(/Copy$/, "").trim());
+      b.textContent = "Copied"; setTimeout(() => b.textContent = "Copy", 1200); };
+    pre.append(b);
+  });
+}
+
+function msgEl(m, idx, isLast){
+  const wrap = document.createElement("div"); wrap.className = "msg " + m.role;
+  const av = document.createElement("div"); av.className = "avatar"; av.textContent = m.role === "user" ? "U" : "AI";
+  const body = document.createElement("div"); body.className = "body";
+  if (m.role === "user"){
+    if (m.attachments && m.attachments.length){
+      const box = document.createElement("div"); box.className = "atts";
+      m.attachments.forEach(a => { const x = document.createElement("div"); x.className = "att"; x.textContent = "📎 " + a.name; box.append(x); });
+      body.append(box);
+    }
+    const t = document.createElement("div"); t.textContent = m.content; body.append(t);
+  }
+  else { body.innerHTML = md(m.content || ""); enhance(body); }
+  if (m.role === "assistant" && m.sources && m.sources.length){
+    const src = document.createElement("div"); src.className = "sources";
+    m.sources.forEach(x => { const a = document.createElement("a"); a.href = x.url; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = x.title; a.title = x.url; src.append(a); });
+    body.append(src);
+  }
+  wrap.append(av, body);
+  if (m.role === "assistant" && m.content && !busy){
+    const a = document.createElement("div"); a.className = "actions";
+    const cp = document.createElement("button"); cp.textContent = "Copy";
+    cp.onclick = () => { navigator.clipboard.writeText(m.content); cp.textContent = "Copied"; setTimeout(()=>cp.textContent="Copy",1200); };
+    a.append(cp);
+    if (isLast){ const rg = document.createElement("button"); rg.textContent = "Regenerate"; rg.onclick = regenerate; a.append(rg); }
+    body.append(a);
+  }
+  return wrap;
+}
+
+function renderThread(){
+  const t = $("#thread"); t.innerHTML = "";
+  const c = cur();
+  if (!c || c.messages.length === 0){
+    t.innerHTML = '<div id="empty"><h1>What can I help with?</h1><div class="chips"></div></div>';
+    for (const s of ["Explain Docker in simple words","Write a Python function to reverse a linked list","Give me a 7-day study plan for AWS","Help me prepare for a DevOps interview"]){
+      const b = document.createElement("button"); b.textContent = s; b.onclick = () => send(s);
+      t.querySelector(".chips").append(b);
+    }
+    return;
+  }
+  c.messages.forEach((m,i) => t.append(msgEl(m, i, i === c.messages.length - 1)));
+  scrollDown();
+}
+function render(){ renderList(); renderThread(); setBusy(busy); }
+function scrollDown(){ const m = $("#msgs"); m.scrollTop = m.scrollHeight; }
+
+function setBusy(b){
+  busy = b;
+  const s = $("#send");
+  s.textContent = b ? "■" : "↑";
+  s.title = b ? "Stop" : "Send";
+  s.disabled = false;
+}
+
+async function stream(){
+  const c = cur();
+  const reply = {role:"assistant", content:""};
+  c.messages.push(reply);
+  setBusy(true); renderThread();
+  const body = $("#thread").lastElementChild.querySelector(".body");
+  body.textContent = "…";
+  controller = new AbortController();
+  let failed = false;
+  try {
+    const r = await fetch("/api/chat", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({messages: c.messages.slice(0, -1), model: settings.model, web_search: !!settings.web, instructions: settings.instructions || ""}), signal: controller.signal
+    });
+    if (!r.ok) throw new Error((await r.json().catch(()=>({}))).error || "Request failed (" + r.status + ")");
+    const reader = r.body.getReader(), dec = new TextDecoder();
+    let buf = "", queued = false, statusText = "";
+    const paint = () => { queued = false; if (!reply.content) return; body.innerHTML = md(reply.content); enhance(body); scrollDown(); };
+    while (true){
+      const {value, done} = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, {stream:true});
+      const parts = buf.split("\n\n"); buf = parts.pop();
+      for (const p of parts){
+        if (!p.startsWith("data: ")) continue;
+        const ev = JSON.parse(p.slice(6));
+        if (ev.error) throw new Error(ev.error);
+        if ("status" in ev){ statusText = ev.status; if (!reply.content){ body.innerHTML = ev.status ? '<span class="status"></span>' : "…"; if (ev.status) body.firstChild.textContent = ev.status; } }
+        if (ev.source){ (reply.sources = reply.sources || []).push(ev.source); }
+        if (ev.text){ reply.content += ev.text; if (!queued){ queued = true; requestAnimationFrame(paint); } }
+      }
+    }
+    paint();
+  } catch(e){
+    if (e.name !== "AbortError"){ failed = true;
+      body.innerHTML = '<span class="err"></span>'; body.firstChild.textContent = "Error: " + e.message; }
+  }
+  controller = null;
+  if (!reply.content){ c.messages.pop(); } // drop empty reply (error or stopped immediately)
+  if (failed && !reply.content) { /* keep error visible until next render */ setBusy(false); renderList(); save(); return; }
+  setBusy(false); save(); render();
+}
+
+function send(text){
+  if (busy) return;
+  text = (text ?? $("#in").value).trim();
+  if (!text && !pending.length) return;
+  let c = cur(); if (!c) { newChat(); c = cur(); }
+  const msg = {role:"user", content:text};
+  if (pending.length){ msg.attachments = pending; pending = []; renderChips(); }
+  c.messages.push(msg);
+  if (c.messages.length === 1) c.title = (text || (msg.attachments && msg.attachments[0].name) || "New chat").slice(0, 40) + (text.length > 40 ? "…" : "");
+  $("#in").value = ""; autoGrow(); save(); renderList();
+  stream();
+}
+function regenerate(){
+  if (busy) return;
+  const c = cur(); if (!c) return;
+  while (c.messages.length && c.messages[c.messages.length-1].role === "assistant") c.messages.pop();
+  if (c.messages.length) stream();
+}
+
+function autoGrow(){ const t = $("#in"); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 200) + "px"; }
+$("#in").addEventListener("input", autoGrow);
+$("#in").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing){ e.preventDefault(); send(); } });
+$("#send").onclick = () => busy ? controller && controller.abort() : send();
+$("#new").onclick = newChat;
+$("#menu").onclick = () => document.body.classList.toggle("open");
+
+// ---- attachments
+function renderChips(){
+  const box = $("#chips"); box.innerHTML = "";
+  pending.forEach((a, i) => {
+    const d = document.createElement("div"); d.className = "att"; d.append("📎 " + a.name + " ");
+    const x = document.createElement("button"); x.textContent = "✕"; x.onclick = () => { pending.splice(i, 1); renderChips(); };
+    d.append(x); box.append(d);
+  });
+}
+const TEXT_EXT = /\.(txt|md|csv|json|py|js|ts|html|css|java|c|cpp|sql|ya?ml|log)$/i;
+function readFile(f){
+  return new Promise(res => {
+    const r = new FileReader();
+    if (f.size > 5*1024*1024){ alert(f.name + " is larger than 5 MB."); return res(null); }
+    if (f.type.startsWith("image/") || f.type === "application/pdf"){
+      r.onload = () => res({name:f.name, type:f.type, data:String(r.result).split(",")[1]});
+      r.readAsDataURL(f);
+    } else if (TEXT_EXT.test(f.name) || f.type.startsWith("text/")){
+      r.onload = () => res({name:f.name, type:"text/plain", text:String(r.result)});
+      r.readAsText(f);
+    } else { alert("Unsupported file: " + f.name); res(null); }
+  });
+}
+$("#attach").onclick = () => $("#file").click();
+$("#file").onchange = async e => {
+  for (const f of e.target.files){ const a = await readFile(f); if (a) pending.push(a); }
+  e.target.value = ""; renderChips();
+};
+$("#in").addEventListener("paste", async e => {
+  const files = [...(e.clipboardData?.files || [])].filter(f => f.type.startsWith("image/"));
+  if (!files.length) return;
+  e.preventDefault();
+  for (const f of files){ const a = await readFile(f); if (a) pending.push(a); }
+  renderChips();
+});
+
+// ---- model, web search, instructions, export
+fetch("/api/config").then(r => r.json()).then(cfg => {
+  const sel = $("#model");
+  cfg.models.forEach(m => { const o = document.createElement("option"); o.value = m; o.textContent = m; sel.append(o); });
+  if (!cfg.models.includes(settings.model)) settings.model = cfg.models[0];
+  sel.value = settings.model;
+  sel.onchange = () => { settings.model = sel.value; saveSettings(); };
+}).catch(() => {});
+$("#web").checked = !!settings.web;
+$("#web").onchange = e => { settings.web = e.target.checked; saveSettings(); };
+$("#instr").onclick = () => { $("#instrText").value = settings.instructions || ""; $("#dlg").showModal(); };
+$("#instrCancel").onclick = () => $("#dlg").close();
+$("#instrSave").onclick = () => { settings.instructions = $("#instrText").value; saveSettings(); $("#dlg").close(); };
+$("#export").onclick = () => {
+  const c = cur(); if (!c || !c.messages.length) return;
+  const md = "# " + c.title + "\n\n" + c.messages.map(m => "**" + (m.role === "user" ? "You" : "Assistant") + ":**\n\n" + m.content).join("\n\n---\n\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([md], {type:"text/markdown"}));
+  a.download = (c.title.replace(/[^\w-]+/g, "_") || "chat") + ".md"; a.click();
+};
+
+if (!state.chats.length || !cur()) { state = {chats:[], current:null}; newChat(); } else render();
+</script>
+</body>
+</html>
